@@ -1,9 +1,14 @@
 import axios from "axios";
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
-export const getRestaurant = async(lat, lng) => {
+const API = axios.create({
+    baseURL: import.meta.env.PROD
+        ? "https://restaurant-backend.onrender.com"
+        : "http://localhost:5000/",
+    headers: { "Content-Type": "application/json" },
+});
+export const getRestaurant = async (lat, lng) => {
     try {
-        const response = await axios.get(`${API_BASE}/api/restaurants`, {
+        // Call the /api/restaurants endpoint
+        const response = await API.get("/api/restaurants", {
             params: { lat, lng },
         });
         return response.data;
@@ -11,5 +16,4 @@ export const getRestaurant = async(lat, lng) => {
         console.error("Error fetching restaurants:", error);
         return [];
     }
-    
-}
+};
