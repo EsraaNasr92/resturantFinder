@@ -7,10 +7,16 @@ const API = axios.create({
 
 export const getRestaurant = async (lat, lng) => {
     try {
-        const res = await API.get("/restaurants", { params: { lat, lng } });
-        return res.data;
-    } catch (err) {
-        console.error(err);
+        const response = await API.get("/restaurants", { params: { lat, lng } });
+        // Ensure we always return an array
+        if (Array.isArray(response.data)) {
+        return response.data;
+        } else {
+        console.warn("Backend returned non-array data:", response.data);
+        return [];
+        }
+    } catch (error) {
+        console.error("Error fetching restaurants:", error);
         return [];
     }
 };
