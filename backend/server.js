@@ -6,14 +6,25 @@ import express from "express";
 dotenv.config(); // Load GOOGLE_API_KEY from .env
 
 const app = express();
+
+// Global CORS (fixes Render 503 missing headers)
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    next();
+});
+
 app.use(express.json());
+
+// Additional CORS (allowed origins)
 app.use(cors({
-        origin: [
-        "http://localhost:5173", // Vite
-        "https://resturant-finder-ten.vercel.app" // ✅ must include https:// for deployed site
-        ],
-        methods: ["GET", "POST"],
-        credentials: true
+    origin: [
+        "http://localhost:5173",
+        "https://resturant-finder-ten.vercel.app"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
 }));
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
@@ -34,12 +45,12 @@ function distance(lat1, lng1, lat2, lng2) {
     return R * c; // distance in meters
 }
 
-// Health check route
+// Health check
 app.get("/", (req, res) => {
     res.send("Backend is running!");
 });
 
-// Endpoint to get nearby restaurants
+// Nearby restaurants API
 app.get("/api/restaurants", async (req, res) => {
     const { lat, lng } = req.query;
 
@@ -48,41 +59,39 @@ app.get("/api/restaurants", async (req, res) => {
     }
 
     try {
-        // Call Google Places Nearby Search
         const response = await axios.get(
-        "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-        {
-            params: {
-            location: `${lat},${lng}`,
-            radius: 1000,       // 1K
-            type: "restaurant",       // only restaurants
-            keyword: "restaurant",    // ensures exact match
-            key: GOOGLE_API_KEY,
-            },
-        }
+            "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+            {
+                params: {
+                    location: `${lat},${lng}`,
+                    radius: 1000,
+                    type: "restaurant",
+                    keyword: "restaurant",
+                    key: GOOGLE_API_KEY,
+                },
+            }
         );
 
-        // Map results and calculate precise distance
         const resultsWithDistance = response.data.results
-        .filter(place => place.geometry && place.geometry.location) // ensure valid location
-        .map(place => ({
-            place_id: place.place_id,
-            name: place.name,
-            vicinity: place.vicinity,
-            rating: place.rating || null,
-            location: place.geometry.location,
-            distance: distance(
-            parseFloat(lat),
-            parseFloat(lng),
-            place.geometry.location.lat,
-            place.geometry.location.lng
-            ),
-            photo: place.photos
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-                : null,
-            directions: `https://www.google.com/maps/dir/?api=1&destination=${place.geometry.location.lat},${place.geometry.location.lng}`,
-        }))
-        .sort((a, b) => a.distance - b.distance); // sort by nearest
+            .filter(place => place.geometry && place.geometry.location)
+            .map(place => ({
+                place_id: place.place_id,
+                name: place.name,
+                vicinity: place.vicinity,
+                rating: place.rating || null,
+                location: place.geometry.location,
+                distance: distance(
+                    parseFloat(lat),
+                    parseFloat(lng),
+                    place.geometry.location.lat,
+                    place.geometry.location.lng
+                ),
+                photo: place.photos
+                    ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
+                    : null,
+                directions: `https://www.google.com/maps/dir/?api=1&destination=${place.geometry.location.lat},${place.geometry.location.lng}`,
+            }))
+            .sort((a, b) => a.distance - b.distance);
 
         res.json(resultsWithDistance);
     } catch (error) {
@@ -91,5 +100,12 @@ app.get("/api/restaurants", async (req, res) => {
     }
 });
 
+// Prevent Render from sleeping (keeps backend awake)
+setInterval(() => {
+    axios.get("https://restaurant-backend.onrender.com/")
+        .then(() => console.log("Keep-alive ping sent"))
+        .catch(() => console.log("Keep-alive failed"));
+}, 1000 * 60 * 14); // every 14 minutes
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
