@@ -8,13 +8,11 @@ dotenv.config(); // Load GOOGLE_API_KEY from .env
 const app = express();
 
 // Global CORS (fixes Render 503 missing headers)
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET,POST");
-    res.header("Access-Control-Allow-Headers", "Content-Type");
-    next();
-});
-
+// Only allow frontend
+app.use(cors({
+    origin: ["https://your-frontend.vercel.app", "http://localhost:5173"],
+    methods: ["GET","POST"]
+}));
 app.use(express.json());
 
 // Additional CORS (allowed origins)
