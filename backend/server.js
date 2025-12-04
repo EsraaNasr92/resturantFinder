@@ -7,23 +7,12 @@ dotenv.config(); // Load GOOGLE_API_KEY from .env
 
 const app = express();
 
-// Global CORS (fixes Render 503 missing headers)
 // Only allow frontend
 app.use(cors({
-    origin: ["https://your-frontend.vercel.app", "http://localhost:5173"],
+    origin: ["https://restaurant-finder-pink.vercel.app/", "http://localhost:5173"],
     methods: ["GET","POST"]
 }));
 app.use(express.json());
-
-// Additional CORS (allowed origins)
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://resturant-finder-ten.vercel.app"
-    ],
-    methods: ["GET", "POST"],
-    credentials: true
-}));
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
